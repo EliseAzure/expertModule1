@@ -27,6 +27,7 @@ private slots:
     void addPointItem(double, double);
     void addPointItem();
     void addToListFromPlot();
+	void onCoordinateChanged(const QString & text );
     // void addToPlotFromList(QTableWidgetItem* item);
 
     void removePointItem();

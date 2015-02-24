@@ -35,7 +35,7 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
     // For add points
     // order is important
     connect(ui->plot, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(onPlotClicked()));
-    connect(ui->plot, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(addToListFromPlot()));
+	//connect(ui->plot, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(addToListFromPlot()));
     // connect(ui->points_list, SIGNAL(itemChanged(QTableWidgetItem*)), this, SLOT(addToPlotFromList(QTableWidgetItem*)));
 }
 
@@ -76,7 +76,9 @@ void MainWindow::onPlotClicked()
 
             ui->plot->replot();
         }
-    }
+	}
+
+	addPointItem(x, y);
 }
 
 void MainWindow::on_button_new_clicked()
@@ -122,6 +124,13 @@ void MainWindow::removePointItem()
 	}
 }
 
+void MainWindow::onCoordinateChanged(const QString& text)
+{
+	int row=sender()->property("row").toInt();
+	int column=sender()->property("column").toInt();
+	std::cout<<"at row "<<row<<" and column "<<column<<" text is "<<text.toStdString()<<std::endl;
+}
+
 void MainWindow::addPointItem(double x, double y)
 {
 	//Insert new row before plus button
@@ -130,12 +139,18 @@ void MainWindow::addPointItem(double x, double y)
 	QTableWidgetItem *item=new QTableWidgetItem;
 	QLineEdit *line=new QLineEdit;
 	line->setText(QString::number(x));
+	line->setProperty("row",ui->points_list->rowCount()-2);
+	line->setProperty("column",0);
+	connect(line, SIGNAL(textChanged(const QString&)), this, SLOT(onCoordinateChanged(const QString&)));
 	ui->points_list->setItem(ui->points_list->rowCount()-2, 0, item);
 	ui->points_list->setCellWidget(ui->points_list->rowCount()-2, 0, line);
 	//Add box for y
 	item=new QTableWidgetItem;
 	line=new QLineEdit;
 	line->setText(QString::number(y));
+	line->setProperty("row",ui->points_list->rowCount()-2);
+	line->setProperty("column",1);
+	connect(line, SIGNAL(textChanged(const QString&)), this, SLOT(onCoordinateChanged(const QString&)));
 	ui->points_list->setItem(ui->points_list->rowCount()-2, 1, item);
 	ui->points_list->setCellWidget(ui->points_list->rowCount()-2, 1, line);
 	//Add minus button
@@ -143,19 +158,21 @@ void MainWindow::addPointItem(double x, double y)
 	QPushButton *button=new QPushButton;
 	button->setProperty("row",ui->points_list->rowCount()-2);
 	button->setText("-");
-	connect(button,SIGNAL(clicked()),this,SLOT(removePointItem()));
+	connect(button, SIGNAL(clicked()), this, SLOT(removePointItem()));
 	ui->points_list->setItem(ui->points_list->rowCount()-2, 2, item);
 	ui->points_list->setCellWidget(ui->points_list->rowCount()-2, 2, button);
 	ui->points_list->horizontalHeader()->setStretchLastSection(true);
 }
 
-void MainWindow::addToListFromPlot() {
+void MainWindow::addToListFromPlot()
+{
     // get position of the latest coordinates
     int i = coordOfDots.size();
     // get the current number of rows
     int rows = ui->points_list->rowCount();
     std::cout << "Current number of rows: " << rows << std::endl;
-    if (rows < i + 2) {
+	if (rows < i + 2)
+	{
         ui->points_list->insertRow(ui->points_list->rowCount()-1);
         QTableWidgetItem *item = new QTableWidgetItem;
         ui->points_list->setItem(ui->points_list->rowCount()-2, 0, item);
@@ -169,12 +186,14 @@ void MainWindow::addToListFromPlot() {
     double x = coordOfDots[i -1].x();
     double y = coordOfDots[i -1].y();
     // add point to the list
-    QLineEdit *line = new QLineEdit;
-    line->setText(QString::number(x));
-    ui->points_list->setCellWidget(i - 1, 0, line);
-    line = new QLineEdit;
-    line->setText(QString::number(y));
-    ui->points_list->setCellWidget(i - 1, 1, line);
+//    QLineEdit *line = new QLineEdit;
+//    line->setText(QString::number(x));
+//    ui->points_list->setCellWidget(i - 1, 0, line);
+//    line = new QLineEdit;
+//    line->setText(QString::number(y));
+//    ui->points_list->setCellWidget(i - 1, 1, line);
+	addPointItem(x, y);
+
 }
 
 void MainWindow::addPointItem()
