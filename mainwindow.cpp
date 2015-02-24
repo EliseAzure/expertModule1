@@ -12,6 +12,8 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
 	ui->plot->xAxis->setRange(-10, 10);
 	ui->plot->yAxis->setRange(-10, 10);
 
+    ui->plot->setDisabled(true);
+
 	//ui->plot->plotLayout()->insertRow(0);
 	//ui->plot->plotLayout()->addElement(0, 0, new QCPPlotTitle(ui->plot, "Interaction Example"));
 	//ui->plot->xAxis->setLabel("x Axis");
@@ -33,10 +35,7 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
 	//~PointList stuff
 
     // For add points
-    // order is important
     connect(ui->plot, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(onPlotClicked()));
-	//connect(ui->plot, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(addToListFromPlot()));
-    // connect(ui->points_list, SIGNAL(itemChanged(QTableWidgetItem*)), this, SLOT(addToPlotFromList(QTableWidgetItem*)));
 }
 
 MainWindow::~MainWindow()
@@ -46,7 +45,6 @@ MainWindow::~MainWindow()
 
 void MainWindow::onPlotClicked()
 {
-    double dotSize=0.08;
     QPoint p = ui->plot->mapFromGlobal(QCursor::pos());
 
     //Get click coordinates in plot scale
@@ -56,34 +54,36 @@ void MainWindow::onPlotClicked()
 
     //Log coordinates
     std::cout << x << "\t" << y << std::endl;
-    //Place a point on the plot
-    QCPItemEllipse *dot = new QCPItemEllipse(ui->plot);
-    ui->plot->addItem(dot);
-    dot->topLeft->setCoords(x-dotSize,y+dotSize);
-    dot->bottomRight->setCoords(x+dotSize,y-dotSize);
-    ui->plot->replot();
 
-    // time to plot a lines
-    if(coordOfDots.size() >= 2) {
-        //! TODO: avoid extra plot
-        for (auto i = coordOfDots.begin() + 1 ; i != coordOfDots.end(); ++i) {
-            QCPItemLine *line = new QCPItemLine(ui->plot);
-            ui->plot->addItem(line);
-            line->start->setCoords(*(i - 1));
-            line->end->setCoords(*i);
-            line->setPen(QPen(QColor(0, 148, 255)));
-            // line.setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssDisc, 5));
-
-            ui->plot->replot();
-        }
-	}
-
-	addPointItem(x, y);
+    toPlot();
+    // add to list
+    QWidget* item = ui->points_list->cellWidget(coordOfDots.size(), 0);
+    if (item) {
+        QLineEdit* line = new QLineEdit;
+        // for x
+        //! I have no idea why I need to reset all properties and even connect if I work with pointer to the item
+        line->setText(QString::number(x));
+        line->setProperty("row", coordOfDots.size() - 1);
+        line->setProperty("column", 0);
+        connect(line, SIGNAL(textChanged(const QString&)), this, SLOT(onCoordinateChanged(const QString&)));
+        ui->points_list->setCellWidget(coordOfDots.size() - 1, 0, line);
+        // for y
+        line = new QLineEdit;
+        line->setText(QString::number(y));
+        line->setProperty("row", coordOfDots.size() - 1);
+        line->setProperty("column", 1);
+        connect(line, SIGNAL(textChanged(const QString&)), this, SLOT(onCoordinateChanged(const QString&)));
+        ui->points_list->setCellWidget(coordOfDots.size() - 1, 1, line);
+    } else {
+        addPointItem(x, y);
+    }
 }
 
 void MainWindow::on_button_new_clicked()
 {
-	//Clear the plot
+    ui->plot->setDisabled(false);
+
+    //Clear the plot
 	ui->plot->clearItems();
 	ui->plot->replot();
 
@@ -115,6 +115,9 @@ void MainWindow::removePointItem()
 {
 	//Get sender row
 	int row=sender()->property("row").toInt();
+    // remove this point
+    coordOfDots.erase(coordOfDots.begin() + row);
+    toPlot();
 	//Remove this row
 	ui->points_list->removeRow(row);
 	//Decrement all above button properties for further usages
@@ -129,39 +132,50 @@ void MainWindow::onCoordinateChanged(const QString& text)
 	int row=sender()->property("row").toInt();
 	int column=sender()->property("column").toInt();
 	std::cout<<"at row "<<row<<" and column "<<column<<" text is "<<text.toStdString()<<std::endl;
+
+    while (coordOfDots.size() < row) {
+        coordOfDots.push_back(QPointF(0 , 0));
+    }
+    if (column == 0) { // if x was changed
+        coordOfDots[row].setX(text.toDouble());
+    } else if (column == 1) { // if y was changed
+        coordOfDots[row].setY(text.toDouble());
+    }
+
+    toPlot();
 }
 
 void MainWindow::addPointItem(double x, double y)
 {
-	//Insert new row before plus button
-	ui->points_list->insertRow(ui->points_list->rowCount()-1);
-	//Add box for x
-	QTableWidgetItem *item=new QTableWidgetItem;
-	QLineEdit *line=new QLineEdit;
-	line->setText(QString::number(x));
-	line->setProperty("row",ui->points_list->rowCount()-2);
-	line->setProperty("column",0);
-	connect(line, SIGNAL(textChanged(const QString&)), this, SLOT(onCoordinateChanged(const QString&)));
-	ui->points_list->setItem(ui->points_list->rowCount()-2, 0, item);
-	ui->points_list->setCellWidget(ui->points_list->rowCount()-2, 0, line);
-	//Add box for y
-	item=new QTableWidgetItem;
-	line=new QLineEdit;
-	line->setText(QString::number(y));
-	line->setProperty("row",ui->points_list->rowCount()-2);
-	line->setProperty("column",1);
-	connect(line, SIGNAL(textChanged(const QString&)), this, SLOT(onCoordinateChanged(const QString&)));
-	ui->points_list->setItem(ui->points_list->rowCount()-2, 1, item);
-	ui->points_list->setCellWidget(ui->points_list->rowCount()-2, 1, line);
-	//Add minus button
-	item=new QTableWidgetItem;
-	QPushButton *button=new QPushButton;
-	button->setProperty("row",ui->points_list->rowCount()-2);
-	button->setText("-");
-	connect(button, SIGNAL(clicked()), this, SLOT(removePointItem()));
-	ui->points_list->setItem(ui->points_list->rowCount()-2, 2, item);
-	ui->points_list->setCellWidget(ui->points_list->rowCount()-2, 2, button);
-	ui->points_list->horizontalHeader()->setStretchLastSection(true);
+    //Insert new row before plus button
+    ui->points_list->insertRow(ui->points_list->rowCount()-1);
+    //Add box for x
+    QTableWidgetItem *item=new QTableWidgetItem;
+    QLineEdit *line=new QLineEdit;
+    line->setText(QString::number(x));
+    line->setProperty("row",ui->points_list->rowCount()-2);
+    line->setProperty("column",0);
+    connect(line, SIGNAL(textChanged(const QString&)), this, SLOT(onCoordinateChanged(const QString&)));
+    ui->points_list->setItem(ui->points_list->rowCount()-2, 0, item);
+    ui->points_list->setCellWidget(ui->points_list->rowCount()-2, 0, line);
+    //Add box for y
+    item=new QTableWidgetItem;
+    line=new QLineEdit;
+    line->setText(QString::number(y));
+    line->setProperty("row",ui->points_list->rowCount()-2);
+    line->setProperty("column",1);
+    connect(line, SIGNAL(textChanged(const QString&)), this, SLOT(onCoordinateChanged(const QString&)));
+    ui->points_list->setItem(ui->points_list->rowCount()-2, 1, item);
+    ui->points_list->setCellWidget(ui->points_list->rowCount()-2, 1, line);
+    //Add minus button
+    item=new QTableWidgetItem;
+    QPushButton *button=new QPushButton;
+    button->setProperty("row",ui->points_list->rowCount()-2);
+    button->setText("-");
+    connect(button, SIGNAL(clicked()), this, SLOT(removePointItem()));
+    ui->points_list->setItem(ui->points_list->rowCount()-2, 2, item);
+    ui->points_list->setCellWidget(ui->points_list->rowCount()-2, 2, button);
+    ui->points_list->horizontalHeader()->setStretchLastSection(true);
 }
 
 void MainWindow::addToListFromPlot()
@@ -185,20 +199,14 @@ void MainWindow::addToListFromPlot()
     // get the latest coordinates
     double x = coordOfDots[i -1].x();
     double y = coordOfDots[i -1].y();
-    // add point to the list
-//    QLineEdit *line = new QLineEdit;
-//    line->setText(QString::number(x));
-//    ui->points_list->setCellWidget(i - 1, 0, line);
-//    line = new QLineEdit;
-//    line->setText(QString::number(y));
-//    ui->points_list->setCellWidget(i - 1, 1, line);
+
 	addPointItem(x, y);
 
 }
 
 void MainWindow::addPointItem()
 {
-	addPointItem(0, 0);
+    addPointItem(0, 0);
 }
 
 void MainWindow::on_button_clear_item_clicked()
@@ -206,9 +214,38 @@ void MainWindow::on_button_clear_item_clicked()
 	//Clear the plot
 	ui->plot->clearItems();
 	ui->plot->replot();
+    ui->plot->setDisabled(true);
 	//Clear the list
 	ui->points_list->clear();
 	ui->points_list->setRowCount(0);
 
     coordOfDots.clear();
+}
+
+//! TODO: avoid extra plot (may be it's unnecessary)
+void MainWindow::toPlot() {
+    ui->plot->clearItems();
+    ui->plot->replot();
+    // place first point on the plot. There is not enough points to plot lines
+    double dotSize=0.08;
+    QCPItemEllipse *dot = new QCPItemEllipse(ui->plot);
+    ui->plot->addItem(dot);
+    dot->topLeft->setCoords(coordOfDots[0].x()-dotSize, coordOfDots[0].y()+dotSize);
+    dot->bottomRight->setCoords(coordOfDots[0].x()+dotSize, coordOfDots[0].y()-dotSize);
+    // lines and other points
+    if(coordOfDots.size() >= 2) {
+        for (auto i = coordOfDots.begin() + 1 ; i != coordOfDots.end(); ++i) {
+            dot = new QCPItemEllipse(ui->plot);
+            ui->plot->addItem(dot);
+            dot->topLeft->setCoords((*i).x()-dotSize, (*i).y()+dotSize);
+            dot->bottomRight->setCoords((*i).x()+dotSize, (*i).y()-dotSize);
+
+            QCPItemLine *line = new QCPItemLine(ui->plot);
+            ui->plot->addItem(line);
+            line->start->setCoords(*(i - 1));
+            line->end->setCoords(*i);
+            line->setPen(QPen(QColor(0, 148, 255)));
+        }
+    }
+    ui->plot->replot();
 }

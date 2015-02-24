@@ -24,7 +24,7 @@ private slots:
     void on_button_clear_item_clicked();
 
     void onPlotClicked();
-    void addPointItem(double, double);
+    void addPointItem(double x, double y);
     void addPointItem();
     void addToListFromPlot();
 	void onCoordinateChanged(const QString & text );
@@ -36,6 +36,8 @@ private slots:
 private:
     Ui::MainWindow *ui;
     std::vector<QPointF> coordOfDots;
+
+    void toPlot();
 };
 
 #endif // MAINWINDOW_H
