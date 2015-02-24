@@ -24,7 +24,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QPushButton" name="button_save">
+   <widget class="QPushButton" name="button_save_to_file">
     <property name="geometry">
      <rect>
       <x>440</x>
@@ -37,7 +37,7 @@
      <string>save to file</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="button_load">
+   <widget class="QPushButton" name="button_load_from_file">
     <property name="geometry">
      <rect>
       <x>440</x>
@@ -50,7 +50,7 @@
      <string>load from file</string>
     </property>
    </widget>
-   <widget class="QComboBox" name="plot_list">
+   <widget class="QComboBox" name="model_list">
     <property name="geometry">
      <rect>
       <x>440</x>
@@ -60,7 +60,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QPushButton" name="button_save_item">
+   <widget class="QPushButton" name="button_save_model">
     <property name="geometry">
      <rect>
       <x>290</x>
@@ -105,7 +105,7 @@
      <string>new</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="button_clear_item">
+   <widget class="QPushButton" name="button_clear_model">
     <property name="geometry">
      <rect>
       <x>290</x>

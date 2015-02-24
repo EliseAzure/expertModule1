@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include "qcustomplot.h"
+#include "model.h"
 
 namespace Ui
 {
@@ -11,31 +12,32 @@ namespace Ui
 
 class MainWindow : public QMainWindow
 {
-    Q_OBJECT
-signals:
-    void mouseClickEvent();
-
+	Q_OBJECT
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
 private slots:
-    void on_button_new_clicked();
-    void on_button_clear_item_clicked();
+	void on_button_new_clicked();
+	void on_button_save_model_clicked();
+	void on_model_list_activated(const QString &str);
 
+	void onCoordinateChanged(const QString & text);
     void onPlotClicked();
-    void addPointItem(double, double);
-    void addPointItem();
-    void addToListFromPlot();
-	void onCoordinateChanged(const QString & text );
-    // void addToPlotFromList(QTableWidgetItem* item);
 
-    void removePointItem();
-
+	void addPointListItem(double, double);
+	void addPointListItem();
+    void addToListFromPlot();	
+	void removePointListItem();
+	void clearAll();
 
 private:
     Ui::MainWindow *ui;
-    std::vector<QPointF> coordOfDots;
+	QVector<QPointF> coordOfDots;
+	QVector<Model> models;
+	QStringList getModelNames();
+	void updatePlot();
+	void updateModelList();
 };
 
 #endif // MAINWINDOW_H
