@@ -88,6 +88,9 @@ void MainWindow::on_button_new_clicked()
 	//Clear the list
 	ui->points_list->setRowCount(0);
 
+    //Clear the list of points
+    coordOfDots.clear();
+
 	//Add items to list
 	//!TODO: See if I need to free this memory(it doesn't work if I do)
 	ui->points_list->insertRow(0);
