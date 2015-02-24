@@ -20,16 +20,21 @@ public:
     ~MainWindow();
 
 private slots:
-	void on_button_new_clicked();
-	void on_button_clear_item_clicked();	
-	void onPlotClicked();
-	void addPointItem(double x, double y);
-	void addPointItem();
-	void removePointItem();
+    void on_button_new_clicked();
+    void on_button_clear_item_clicked();
+
+    void onPlotClicked();
+    void addPointItem(double, double);
+    void addPointItem();
+    void addToListFromPlot();
+    // void addToPlotFromList(QTableWidgetItem* item);
+
+    void removePointItem();
 
 
-	private:
+private:
     Ui::MainWindow *ui;
+    std::vector<QPointF> coordOfDots;
 };
 
 #endif // MAINWINDOW_H
