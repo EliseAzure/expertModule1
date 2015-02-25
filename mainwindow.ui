@@ -73,7 +73,7 @@
      <string>save</string>
     </property>
    </widget>
-   <widget class="QTableWidget" name="points_list">
+   <widget class="QTableWidget" name="point_list">
     <property name="geometry">
      <rect>
       <x>0</x>

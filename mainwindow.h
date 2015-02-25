@@ -27,17 +27,18 @@ private slots:
 
 	void addPointListItem(double, double);
 	void addPointListItem();
-    void addToListFromPlot();	
 	void removePointListItem();
 	void clearAll();
 
 private:
     Ui::MainWindow *ui;
-	QVector<QPointF> coordOfDots;
+	QVector<QPointF> points;
 	QVector<Model> models;
 	QStringList getModelNames();
 	void updatePlot();
 	void updateModelList();
+	void updatePointList();
+	void updatePointsFromList();
 };
 
 #endif // MAINWINDOW_H

@@ -21,19 +21,19 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
 	//PointList stuff
 	//Adjust column sizes(shitcoded)
 	//!TODO: replace with accurate methods
-	ui->points_list->setColumnWidth(0,ui->points_list->width()*0.4);
-	ui->points_list->setColumnWidth(1,ui->points_list->width()*0.4);
-	ui->points_list->horizontalHeader()->setStretchLastSection(true);
+	ui->point_list->setColumnWidth(0,ui->point_list->width()*0.4);
+	ui->point_list->setColumnWidth(1,ui->point_list->width()*0.4);
+	ui->point_list->horizontalHeader()->setStretchLastSection(true);
 	//Edit and remove headers
-	ui->points_list->setHorizontalHeaderItem(0,new QTableWidgetItem("x"));
-	ui->points_list->setHorizontalHeaderItem(1,new QTableWidgetItem("y"));
-	ui->points_list->setHorizontalHeaderItem(2,new QTableWidgetItem(""));
-	ui->points_list->verticalHeader()->setVisible(false);
+	ui->point_list->setHorizontalHeaderItem(0,new QTableWidgetItem("x"));
+	ui->point_list->setHorizontalHeaderItem(1,new QTableWidgetItem("y"));
+	ui->point_list->setHorizontalHeaderItem(2,new QTableWidgetItem(""));
+	ui->point_list->verticalHeader()->setVisible(false);
 	//~PointList stuff
 
-	// For adding points
+	//Plot clicks handler
 	connect(ui->plot, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(onPlotClicked()));
-	//Clear button
+	//Clear button handler(also used in many methods as standart cleaning method)
 	connect(ui->button_clear_model, SIGNAL(clicked()), this, SLOT(clearAll()));
 }
 
@@ -51,56 +51,32 @@ void MainWindow::onPlotClicked()
 	//Get click coordinates in plot scale
 	double x = ui->plot->xAxis->pixelToCoord(p.x());
 	double y = ui->plot->yAxis->pixelToCoord(p.y());
-	coordOfDots.push_back(QPointF(x, y));
+	points.push_back(QPointF(x, y));
 
 	//Log coordinates
 	std::cout <<"Mouse position on plot: "<< x << "\t" << y << std::endl;
 
 	updatePlot();
-	// add to list
-	QWidget* item = ui->points_list->cellWidget(coordOfDots.size(), 0);
-	if (item)
-	{
-		QLineEdit* line = new QLineEdit;
-		// for x
-		//! I have no idea why I need to reset all properties and even connect if I work with pointer to the item
-		line->setText(QString::number(x));
-		line->setProperty("row", coordOfDots.size() - 1);
-		line->setProperty("column", 0);
-		connect(line, SIGNAL(textChanged(const QString&)), this, SLOT(onCoordinateChanged(const QString&)));
-		ui->points_list->setCellWidget(coordOfDots.size() - 1, 0, line);
-		// for y
-		line = new QLineEdit;
-		line->setText(QString::number(y));
-		line->setProperty("row", coordOfDots.size() - 1);
-		line->setProperty("column", 1);
-		connect(line, SIGNAL(textChanged(const QString&)), this, SLOT(onCoordinateChanged(const QString&)));
-		ui->points_list->setCellWidget(coordOfDots.size() - 1, 1, line);
-	}
-	else
-	{
-		addPointListItem(x, y);
-	}
+	updatePointList();
 }
 
 void MainWindow::on_button_new_clicked()
 {
-	ui->plot->setDisabled(false);
-
+	//Full clear and enabling the plot
 	clearAll();
 	ui->plot->setDisabled(false);
 
 	//Add items to list
 	//!TODO: See if I need to free this memory(it doesn't work if I do)
-	ui->points_list->insertRow(0);
+	ui->point_list->insertRow(0);
 	QTableWidgetItem *item=new QTableWidgetItem;
 	//Add plus buttom
 	QPushButton *button=new QPushButton;
 	button->setText("+");
 	connect(button,SIGNAL(clicked()),this,SLOT(addPointListItem()));
-	ui->points_list->setItem(0,0,item);
-	ui->points_list->setCellWidget(0,0,button);
-	ui->points_list->setSpan(0,0,1,3);
+	ui->point_list->setItem(0,0,item);
+	ui->point_list->setCellWidget(0,0,button);
+	ui->point_list->setSpan(0,0,1,3);
 	//Add two first dots
 	for(int i=0; i<2; i++)
 	{
@@ -111,26 +87,31 @@ void MainWindow::on_button_new_clicked()
 void MainWindow::on_button_save_model_clicked()
 {
 	bool ok;
+	//Input model name dialog
 	QString name = QInputDialog::getText(this, "Save model as", "Model name:", QLineEdit::Normal, "", &ok);
 	if(ok && !name.isEmpty())
 	{
 		std::cout<<"Saving as: "<<name.toStdString()<<std::endl;
+		//See if we already have a model with the same name
 		if(getModelNames().contains(name,Qt::CaseInsensitive))
 		{
+			//Go for a message box with overwriting shit
 			QMessageBox msgBox;
 			msgBox.setText("Model with the same name already exists");
 			msgBox.setInformativeText("Do you want to overwrite it?");
 			msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-			//msgBox.setDefaultButton(QMessageBox::Ok);
 			int res = msgBox.exec();
+			//See what we got from the message box
 			switch(res)
 			{
 				case QMessageBox::Ok:
+					//Go to the models list and find our model
 					for(auto i=models.begin();i<models.end();i++)
 					{
 						if((*i).getName()==name)
 						{
-							(*i).setPoints(coordOfDots);
+							//Replace it's points with current
+							(*i).setPoints(points);
 						}
 					}
 					break;
@@ -142,7 +123,8 @@ void MainWindow::on_button_save_model_clicked()
 		}
 		else
 		{
-			models.push_back(Model(name,coordOfDots));
+			//If we do not then just add a new model to out models list
+			models.push_back(Model(name,points));
 		}
 	}
 	updateModelList();
@@ -150,36 +132,23 @@ void MainWindow::on_button_save_model_clicked()
 
 void MainWindow::on_model_list_activated(const QString &str)
 {
+	//We are gonna find a model with a name that was selected in the combo box
 	for(auto i=models.begin();i<models.end();i++)
 	{
 		if((*i).getName()==str)
 		{
-			coordOfDots=(*i).getPoints();
+			//And copy it's points to current points
+			points=(*i).getPoints();
 		}
 	}
 	updatePlot();
+	updatePointList();
 }
 
 void MainWindow::onCoordinateChanged(const QString& text)
 {
-	int row=sender()->property("row").toInt();
-	int column=sender()->property("column").toInt();
-	std::cout<<"at row "<<row<<" and column "<<column<<" text is "<<text.toStdString()<<std::endl;
-
-	while (coordOfDots.size() < row)
-	{
-		coordOfDots.push_back(QPointF(0 , 0));
-	}
-	if (column == 0)
-	{
-		// if x was changed
-		coordOfDots[row].setX(text.toDouble());
-	} else if (column == 1)
-	{
-		// if y was changed
-		coordOfDots[row].setY(text.toDouble());
-	}
-
+	//Just update points and plot
+	updatePointsFromList();
 	updatePlot();
 }
 
@@ -188,48 +157,44 @@ void MainWindow::removePointListItem()
 	//Get sender row
 	int row=sender()->property("row").toInt();
 	// remove this point
-	coordOfDots.erase(coordOfDots.begin() + row);
+	points.erase(points.begin() + row);
 	updatePlot();
 	//Remove this row
-	ui->points_list->removeRow(row);
+	ui->point_list->removeRow(row);
 	//Decrement all above button properties for further usages
-	for(int i=row;i<ui->points_list->rowCount()-1;i++)
+	for(int i=row;i<ui->point_list->rowCount()-1;i++)
 	{
-		ui->points_list->cellWidget(i,2)->setProperty("row",ui->points_list->cellWidget(i,2)->property("row").toInt()-1);
+		ui->point_list->cellWidget(i,2)->setProperty("row",ui->point_list->cellWidget(i,2)->property("row").toInt()-1);
 	}
 }
 
 void MainWindow::addPointListItem(double x, double y)
 {
 	//Insert new row before plus button
-	ui->points_list->insertRow(ui->points_list->rowCount()-1);
+	ui->point_list->insertRow(ui->point_list->rowCount()-1);
 	//Add box for x
 	QTableWidgetItem *item=new QTableWidgetItem;
 	QLineEdit *line=new QLineEdit;
 	line->setText(QString::number(x));
-	line->setProperty("row",ui->points_list->rowCount()-2);
-	line->setProperty("column",0);
-	connect(line, SIGNAL(textChanged(const QString&)), this, SLOT(onCoordinateChanged(const QString&)));
-	ui->points_list->setItem(ui->points_list->rowCount()-2, 0, item);
-	ui->points_list->setCellWidget(ui->points_list->rowCount()-2, 0, line);
+	connect(line, SIGNAL(textEdited(const QString&)), this, SLOT(onCoordinateChanged(const QString&)));
+	ui->point_list->setItem(ui->point_list->rowCount()-2, 0, item);
+	ui->point_list->setCellWidget(ui->point_list->rowCount()-2, 0, line);
 	//Add box for y
 	item=new QTableWidgetItem;
 	line=new QLineEdit;
 	line->setText(QString::number(y));
-	line->setProperty("row",ui->points_list->rowCount()-2);
-	line->setProperty("column",1);
-	connect(line, SIGNAL(textChanged(const QString&)), this, SLOT(onCoordinateChanged(const QString&)));
-	ui->points_list->setItem(ui->points_list->rowCount()-2, 1, item);
-	ui->points_list->setCellWidget(ui->points_list->rowCount()-2, 1, line);
+	connect(line, SIGNAL(textEdited(const QString&)), this, SLOT(onCoordinateChanged(const QString&)));
+	ui->point_list->setItem(ui->point_list->rowCount()-2, 1, item);
+	ui->point_list->setCellWidget(ui->point_list->rowCount()-2, 1, line);
 	//Add minus button
 	item=new QTableWidgetItem;
 	QPushButton *button=new QPushButton;
-	button->setProperty("row",ui->points_list->rowCount()-2);
+	button->setProperty("row",ui->point_list->rowCount()-2);
 	button->setText("-");
 	connect(button, SIGNAL(clicked()), this, SLOT(removePointListItem()));
-	ui->points_list->setItem(ui->points_list->rowCount()-2, 2, item);
-	ui->points_list->setCellWidget(ui->points_list->rowCount()-2, 2, button);
-	ui->points_list->horizontalHeader()->setStretchLastSection(true);
+	ui->point_list->setItem(ui->point_list->rowCount()-2, 2, item);
+	ui->point_list->setCellWidget(ui->point_list->rowCount()-2, 2, button);
+	ui->point_list->horizontalHeader()->setStretchLastSection(true);
 }
 
 void MainWindow::addPointListItem()
@@ -237,82 +202,94 @@ void MainWindow::addPointListItem()
 	addPointListItem(0, 0);
 }
 
-void MainWindow::addToListFromPlot()
-{
-	// get position of the latest coordinates
-	int i = coordOfDots.size();
-	// get the current number of rows
-	int rows = ui->points_list->rowCount();
-	std::cout << "Current number of rows: " << rows << std::endl;
-	if (rows < i + 2)
-	{
-		ui->points_list->insertRow(ui->points_list->rowCount()-1);
-		QTableWidgetItem *item = new QTableWidgetItem;
-		ui->points_list->setItem(ui->points_list->rowCount()-2, 0, item);
-		item=new QTableWidgetItem;
-		ui->points_list->setItem(ui->points_list->rowCount()-2, 1, item);
-
-		rows = ui->points_list->rowCount();
-	}
-
-	// get the latest coordinates
-	double x = coordOfDots[i -1].x();
-	double y = coordOfDots[i -1].y();
-
-	addPointListItem(x, y);
-}
-
 void MainWindow::clearAll()
 {
-	//Clear the plot
+	//Clear and disable the plot
 	ui->plot->clearItems();
 	ui->plot->replot();
 	ui->plot->setDisabled(true);
 	//Clear the list
-	ui->points_list->setRowCount(0);
+	ui->point_list->setRowCount(0);
 	//Clear points vector
-	coordOfDots.clear();
+	points.clear();
 }
 
 //class methods
 
 QStringList MainWindow::getModelNames()
 {
+	//Returns all names from models list(sorted)
 	QStringList list;
 	for(auto i=models.begin();i<models.end();i++)
 	{
 		list.append((*i).getName());
 	}
-	return list;
+	return list.sort();
 }
 
 void MainWindow::updateModelList()
 {
+	//Puts all names from models list to our combo box(sorted)
 	ui->model_list->clear();
 	ui->model_list->addItems(getModelNames());
 }
 
-//! TODO: avoid extra plot (may be it's unnecessary)
+void MainWindow::updatePointList()
+{	
+	//Get row count(it's changed if I remove rows in process, so we need to get it before all)
+	int lastRowCount=ui->point_list->rowCount();
+	//Remove redundant rows from list
+	for(int i=0;i<lastRowCount-1-points.size();i++)
+	{
+		ui->point_list->removeRow(lastRowCount-i-2);
+	}
+	//Or add some
+	for(int i=0;i<points.size()-lastRowCount+1;i++)
+	{
+		addPointListItem();
+	}
+	//Replace all coordinates with new
+	for(int i=0;i<points.size();i++)
+	{
+		((QLineEdit*)ui->point_list->cellWidget(i,0))->setText(QString::number(points[i].x()));
+		((QLineEdit*)ui->point_list->cellWidget(i,1))->setText(QString::number(points[i].y()));
+	}
+}
+
+void MainWindow::updatePointsFromList()
+{
+	//Clear the list so we can push_back to it
+	points.clear();
+	//Pushing coordinates from list to our points vector
+	for(int i=0;i<ui->point_list->rowCount()-1;i++)
+	{
+		points.push_back(QPointF(((QLineEdit*)ui->point_list->cellWidget(i,0))->text().toDouble(),((QLineEdit*)ui->point_list->cellWidget(i,1))->text().toDouble()));
+	}
+}
+
 void MainWindow::updatePlot()
 {
+	//! TODO: avoid extra plot (may be it's unnecessary)
+	//Clear and update the plot
 	ui->plot->clearItems();
 	ui->plot->replot();
 	// place first point on the plot. There is not enough points to plot lines
 	double dotSize=0.08;
 	QCPItemEllipse *dot = new QCPItemEllipse(ui->plot);
 	ui->plot->addItem(dot);
-	dot->topLeft->setCoords(coordOfDots[0].x()-dotSize, coordOfDots[0].y()+dotSize);
-	dot->bottomRight->setCoords(coordOfDots[0].x()+dotSize, coordOfDots[0].y()-dotSize);
-	// lines and other points
-	if(coordOfDots.size() >= 2)
+	dot->topLeft->setCoords(points[0].x()-dotSize, points[0].y()+dotSize);
+	dot->bottomRight->setCoords(points[0].x()+dotSize, points[0].y()-dotSize);
+	//Plot lines and other points
+	if(points.size() >= 2)
 	{
-		for (auto i = coordOfDots.begin() + 1 ; i != coordOfDots.end(); ++i)
+		for (auto i = points.begin() + 1 ; i != points.end(); ++i)
 		{
+			//Point stuff
 			dot = new QCPItemEllipse(ui->plot);
 			ui->plot->addItem(dot);
 			dot->topLeft->setCoords((*i).x()-dotSize, (*i).y()+dotSize);
 			dot->bottomRight->setCoords((*i).x()+dotSize, (*i).y()-dotSize);
-
+			//Line stuff
 			QCPItemLine *line = new QCPItemLine(ui->plot);
 			ui->plot->addItem(line);
 			line->start->setCoords(*(i - 1));
