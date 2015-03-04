@@ -83,14 +83,11 @@
      </rect>
     </property>
     <property name="columnCount">
-     <number>3</number>
+     <number>0</number>
     </property>
     <attribute name="horizontalHeaderCascadingSectionResizes">
      <bool>false</bool>
     </attribute>
-    <column/>
-    <column/>
-    <column/>
    </widget>
    <widget class="QPushButton" name="button_new">
     <property name="geometry">
@@ -116,6 +113,32 @@
     </property>
     <property name="text">
      <string>clear</string>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="plot_mode">
+    <property name="geometry">
+     <rect>
+      <x>530</x>
+      <y>470</y>
+      <width>84</width>
+      <height>19</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Plot Mode</string>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="model_mode">
+    <property name="geometry">
+     <rect>
+      <x>530</x>
+      <y>490</y>
+      <width>84</width>
+      <height>19</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Model Mode</string>
     </property>
    </widget>
   </widget>

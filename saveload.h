@@ -8,8 +8,8 @@ class SaveLoad
 	public:
 		SaveLoad();
 		~SaveLoad();
-		static void save(QVector<Model> models, QString filename);
-		static void load(QVector<Model>* models, QString filename);
+		static void save(QVector<Plot> models, QString filename);
+		static void load(QVector<Plot>* models, QString filename);
 };
 
 #endif // SAVELOAD

@@ -1,25 +1,31 @@
 #ifndef MODEL
 #define MODEL
 
-#include <QVector>
-#include <QString>
-#include <QPointF>
+#include "term.h"
 
 class Model
 {
 	public:
 		Model();
 		Model(QString name);
-		Model(QString name, QVector<QPointF> points);
+		Model(QString name, QVector<Term> terms);
+		Model(QString name, QVector<Term> terms, double rangeStart, double rangeEnd);
 		~Model();
-		void setPoints(QVector<QPointF> points);
-		QVector<QPointF> getPoints();
 		void setName(QString name);
 		QString getName();
+		void setTerms(QVector<Term> terms);
+		QVector<Term> getTerms();
+		void setRangeStart(double rangeStart);
+		void setRangeEnd(double rangeEnd);
+		void setRange(double rangeStart, double rangeEnd);
+		double getRangeStart();
+		double getRangeEnd();
 
 	private:
-		QVector<QPointF> points;
 		QString name;
+		QVector<Term> terms;
+		double rangeStart, rangeEnd;
+
 };
 
 #endif // MODEL

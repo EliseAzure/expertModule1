@@ -18,11 +18,15 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     saveload.cpp \
     model.cpp \
-    qcustomplot.cpp
+    qcustomplot.cpp \
+    plot.cpp \
+    term.cpp
 
 HEADERS  += mainwindow.h \
     saveload.h \
     model.h \
-    qcustomplot.h
+    qcustomplot.h \
+    plot.h \
+    term.h
 
 FORMS    += mainwindow.ui

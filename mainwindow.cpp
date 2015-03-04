@@ -1,7 +1,6 @@
 #include "mainwindow.h"
 #include "model.h"
 #include "saveload.h"
-#include "ui_mainwindow.h"
 
 #include <iostream>
 #include <stdlib.h>
@@ -12,25 +11,18 @@
 MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWindow)
 {
 	ui->setupUi(this);
-	//Plot stuff
-	ui->plot->setInteractions(QCP::iRangeZoom | QCP::iSelectPlottables);
-	ui->plot->xAxis->setRange(-10, 10);
-	ui->plot->yAxis->setRange(-10, 10);
 
-	clearAll();
+	setupMode(PLOT_MODE);
 
-	//PointList stuff
-	//Adjust column sizes(shitcoded)
-	//!TODO: replace with accurate methods
-	ui->point_list->setColumnWidth(0,ui->point_list->width()*0.4);
-	ui->point_list->setColumnWidth(1,ui->point_list->width()*0.4);
-	ui->point_list->horizontalHeader()->setStretchLastSection(true);
-	//Edit and remove headers
-	ui->point_list->setHorizontalHeaderItem(0,new QTableWidgetItem("x"));
-	ui->point_list->setHorizontalHeaderItem(1,new QTableWidgetItem("y"));
-	ui->point_list->setHorizontalHeaderItem(2,new QTableWidgetItem(""));
-	ui->point_list->verticalHeader()->setVisible(false);
-	//~PointList stuff
+	//MODEL test
+	points.push_back(QPointF(0,0));
+	points.push_back(QPointF(0,1));
+	points.push_back(QPointF(2,2));
+	points.push_back(QPointF(6,7));
+	Plot plot("plotname",points);
+	Term term("heat",plot,0,6);
+	Model model("model1",QVector<Term>{term},0,15);
+
 
 	//Plot clicks handler
 	connect(ui->plot, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(onPlotClicked()));
@@ -125,7 +117,7 @@ void MainWindow::on_button_save_model_clicked()
 		else
 		{
 			//If we do not then just add a new model to out models list
-			models.push_back(Model(name,points));
+			models.push_back(Plot(name,points));
 		}
 	}
 	updateModelList();
@@ -317,6 +309,7 @@ void MainWindow::updatePlot()
 	double dotSize=0.08;
 	QCPItemEllipse *dot = new QCPItemEllipse(ui->plot);
 	ui->plot->addItem(dot);
+	//! TODO: check for null length of points vector here
 	dot->topLeft->setCoords(points[0].x()-dotSize, points[0].y()+dotSize);
 	dot->bottomRight->setCoords(points[0].x()+dotSize, points[0].y()-dotSize);
 	//Plot lines and other points
@@ -338,4 +331,54 @@ void MainWindow::updatePlot()
 		}
 	}
 	ui->plot->replot();
+}
+
+void MainWindow::setupMode(int mode)
+{
+	if(mode==PLOT_MODE)
+	{
+		ui->plot_mode->setChecked(true);
+		ui->model_mode->setChecked(false);
+
+		//Plot stuff
+		ui->plot->setInteractions(QCP::iRangeZoom | QCP::iSelectPlottables);
+		ui->plot->xAxis->setRange(-10, 10);
+		ui->plot->yAxis->setRange(-10, 10);
+
+		clearAll();
+
+		//PointList stuff
+		//Adjust column sizes(shitcoded)
+		//!TODO: replace with accurate methods
+		ui->point_list->setColumnCount(3);
+		ui->point_list->setColumnWidth(0,ui->point_list->width()*0.4);
+		ui->point_list->setColumnWidth(1,ui->point_list->width()*0.4);
+		ui->point_list->horizontalHeader()->setStretchLastSection(true);
+		//Edit and remove headers
+		ui->point_list->setHorizontalHeaderItem(0,new QTableWidgetItem("x"));
+		ui->point_list->setHorizontalHeaderItem(1,new QTableWidgetItem("y"));
+		ui->point_list->setHorizontalHeaderItem(2,new QTableWidgetItem(""));
+		ui->point_list->verticalHeader()->setVisible(false);
+		//~PointList stuff
+	}
+	else if(mode==MODEL_MODE)
+	{
+
+	}
+}
+
+void MainWindow::on_plot_mode_toggled(bool checked)
+{
+	if(checked)
+	{
+		emit setupMode(PLOT_MODE);
+	}
+}
+
+void MainWindow::on_model_mode_toggled(bool checked)
+{
+	if(checked)
+	{
+		emit setupMode(MODEL_MODE);
+	}
 }

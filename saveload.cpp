@@ -15,7 +15,7 @@ SaveLoad::~SaveLoad()
 
 }
 
-void SaveLoad::save(QVector<Model> models, QString filename)
+void SaveLoad::save(QVector<Plot> models, QString filename)
 {
 	QDomDocument doc("MODELS");
 
@@ -58,7 +58,7 @@ void SaveLoad::save(QVector<Model> models, QString filename)
 	}
 }
 
-void traverseNode(const QDomNode& node, QVector<Model>* models)
+void traverseNode(const QDomNode& node, QVector<Plot>* models)
 {
 	QDomNode domNode = node.firstChild();
 	while(!domNode.isNull() && node.toElement().tagName()=="models")
@@ -69,7 +69,7 @@ void traverseNode(const QDomNode& node, QVector<Model>* models)
 			if(!domElement.isNull() && domElement.tagName() == "model")
 			{
 				//qDebug() << "model attr: " << domElement.attribute("id", "");
-				Model model;
+				Plot model;
 
 
 				QDomNode domN = domElement.firstChild();
@@ -119,7 +119,7 @@ void traverseNode(const QDomNode& node, QVector<Model>* models)
 	}
 }
 
-void SaveLoad::load(QVector<Model>* models, QString filename)
+void SaveLoad::load(QVector<Plot>* models, QString filename)
 {
 	QDomDocument doc;
 	QFile file(filename);
