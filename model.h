@@ -16,8 +16,6 @@ class Model
 		QVector<QPointF> getPoints();
 		void setName(QString name);
 		QString getName();
-		QString toString();
-		void fromString(QString asString);
 
 	private:
 		QVector<QPointF> points;

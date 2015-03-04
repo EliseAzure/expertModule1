@@ -22,7 +22,7 @@ private slots:
 	void on_button_save_model_clicked();
 	void on_model_list_activated(const QString &str);
 
-	void onCoordinateChanged(const QString & text);
+	void onCoordinateChanged();
     void onPlotClicked();
 
 	void addPointListItem(double, double);
@@ -30,7 +30,11 @@ private slots:
 	void removePointListItem();
 	void clearAll();
 
-private:
+	void on_button_save_to_file_clicked();
+
+	void on_button_load_from_file_clicked();
+
+	private:
     Ui::MainWindow *ui;
 	QVector<QPointF> points;
 	QVector<Model> models;

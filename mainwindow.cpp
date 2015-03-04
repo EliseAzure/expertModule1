@@ -1,10 +1,11 @@
 #include "mainwindow.h"
 #include "model.h"
-#include "savedialog.h"
+#include "saveload.h"
 #include "ui_mainwindow.h"
 
 #include <iostream>
 #include <stdlib.h>
+#include <QDomDocument>
 
 //class constructors/destructors
 
@@ -130,6 +131,29 @@ void MainWindow::on_button_save_model_clicked()
 	updateModelList();
 }
 
+void MainWindow::on_button_save_to_file_clicked()
+{
+	QString saveDir = QFileDialog::getSaveFileName(this, tr("Save File"), "/home/models.mdl", tr("Models (*.mdl)"));
+	SaveLoad::save(models, saveDir);
+}
+
+void MainWindow::on_button_load_from_file_clicked()
+{
+	QString openDir = QFileDialog::getOpenFileName(this, tr("Open File"), "/home/models.mdl", tr("Models (*.mdl)"));
+	SaveLoad::load(&models, openDir);
+	qDebug()<<openDir;
+	if(models.length()>0)
+	{
+		points=models[0].getPoints();
+		qDebug()<<QString::number(models.length());
+		qDebug()<<QString::number(points.length());
+		updateModelList();
+		ui->model_list->setCurrentIndex(0);
+		updatePlot();
+		updatePointList();
+	}
+}
+
 void MainWindow::on_model_list_activated(const QString &str)
 {
 	//We are gonna find a model with a name that was selected in the combo box
@@ -145,7 +169,7 @@ void MainWindow::on_model_list_activated(const QString &str)
 	updatePointList();
 }
 
-void MainWindow::onCoordinateChanged(const QString& text)
+void MainWindow::onCoordinateChanged()
 {
 	//Just update points and plot
 	updatePointsFromList();
@@ -176,14 +200,14 @@ void MainWindow::addPointListItem(double x, double y)
 	QTableWidgetItem *item=new QTableWidgetItem;
 	QLineEdit *line=new QLineEdit;
 	line->setText(QString::number(x));
-	connect(line, SIGNAL(textEdited(const QString&)), this, SLOT(onCoordinateChanged(const QString&)));
+	connect(line, SIGNAL(textEdited(const QString&)), this, SLOT(onCoordinateChanged()));
 	ui->point_list->setItem(ui->point_list->rowCount()-2, 0, item);
 	ui->point_list->setCellWidget(ui->point_list->rowCount()-2, 0, line);
 	//Add box for y
 	item=new QTableWidgetItem;
 	line=new QLineEdit;
 	line->setText(QString::number(y));
-	connect(line, SIGNAL(textEdited(const QString&)), this, SLOT(onCoordinateChanged(const QString&)));
+	connect(line, SIGNAL(textEdited(const QString&)), this, SLOT(onCoordinateChanged()));
 	ui->point_list->setItem(ui->point_list->rowCount()-2, 1, item);
 	ui->point_list->setCellWidget(ui->point_list->rowCount()-2, 1, line);
 	//Add minus button
@@ -224,7 +248,8 @@ QStringList MainWindow::getModelNames()
 	{
 		list.append((*i).getName());
 	}
-	return list.sort();
+	list.sort();
+	return list;
 }
 
 void MainWindow::updateModelList()
@@ -238,6 +263,21 @@ void MainWindow::updatePointList()
 {	
 	//Get row count(it's changed if I remove rows in process, so we need to get it before all)
 	int lastRowCount=ui->point_list->rowCount();
+	//See if it's 0
+	if(!lastRowCount)
+	{
+		//!TODO: make new method for this and a signal from the button
+		//Add plus buttom
+		ui->point_list->insertRow(0);
+		QTableWidgetItem *item=new QTableWidgetItem;
+		QPushButton *button=new QPushButton;
+		button->setText("+");
+		connect(button,SIGNAL(clicked()),this,SLOT(addPointListItem()));
+		ui->point_list->setItem(0,0,item);
+		ui->point_list->setCellWidget(0,0,button);
+		ui->point_list->setSpan(0,0,1,3);
+		lastRowCount=ui->point_list->rowCount();
+	}
 	//Remove redundant rows from list
 	for(int i=0;i<lastRowCount-1-points.size();i++)
 	{
