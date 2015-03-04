@@ -16,6 +16,9 @@ class Plot
 		QVector<QPointF> getPoints();
 		void setName(QString name);
 		QString getName();
+		void addPointBack(QPointF point);
+		void clearPoints();
+		void erasePoint(int n);
 
 	private:
 		QVector<QPointF> points;

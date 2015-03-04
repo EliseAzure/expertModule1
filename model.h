@@ -20,6 +20,7 @@ class Model
 		void setRange(double rangeStart, double rangeEnd);
 		double getRangeStart();
 		double getRangeEnd();
+		void clearTerms();
 
 	private:
 		QString name;

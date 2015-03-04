@@ -12,9 +12,11 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
 {
 	ui->setupUi(this);
 
-	setupMode(PLOT_MODE);
+	mode=PLOT_MODE;
+	setupMode();
 
 	//MODEL test
+	QVector<QPointF> points;
 	points.push_back(QPointF(0,0));
 	points.push_back(QPointF(0,1));
 	points.push_back(QPointF(2,2));
@@ -22,7 +24,7 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
 	Plot plot("plotname",points);
 	Term term("heat",plot,0,6);
 	Model model("model1",QVector<Term>{term},0,15);
-
+	curModel=model;
 
 	//Plot clicks handler
 	connect(ui->plot, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(onPlotClicked()));
@@ -44,7 +46,7 @@ void MainWindow::onPlotClicked()
 	//Get click coordinates in plot scale
 	double x = ui->plot->xAxis->pixelToCoord(p.x());
 	double y = ui->plot->yAxis->pixelToCoord(p.y());
-	points.push_back(QPointF(x, y));
+	curPlot.addPointBack(QPointF(x, y));
 
 	//Log coordinates
 	std::cout <<"Mouse position on plot: "<< x << "\t" << y << std::endl;
@@ -99,12 +101,12 @@ void MainWindow::on_button_save_model_clicked()
 			{
 				case QMessageBox::Ok:
 					//Go to the models list and find our model
-					for(auto i=models.begin();i<models.end();i++)
+					for(auto i=plots.begin();i<plots.end();i++)
 					{
 						if((*i).getName()==name)
 						{
 							//Replace it's points with current
-							(*i).setPoints(points);
+							(*i).setPoints(curPlot.getPoints());
 						}
 					}
 					break;
@@ -117,7 +119,8 @@ void MainWindow::on_button_save_model_clicked()
 		else
 		{
 			//If we do not then just add a new model to out models list
-			models.push_back(Plot(name,points));
+			curPlot.setName(name);
+			plots.push_back(curPlot);
 		}
 	}
 	updateModelList();
@@ -126,19 +129,17 @@ void MainWindow::on_button_save_model_clicked()
 void MainWindow::on_button_save_to_file_clicked()
 {
 	QString saveDir = QFileDialog::getSaveFileName(this, tr("Save File"), "/home/models.mdl", tr("Models (*.mdl)"));
-	SaveLoad::save(models, saveDir);
+	SaveLoad::save(plots, saveDir);
 }
 
 void MainWindow::on_button_load_from_file_clicked()
 {
 	QString openDir = QFileDialog::getOpenFileName(this, tr("Open File"), "/home/models.mdl", tr("Models (*.mdl)"));
-	SaveLoad::load(&models, openDir);
+	SaveLoad::load(&plots, openDir);
 	qDebug()<<openDir;
-	if(models.length()>0)
+	if(plots.length()>0)
 	{
-		points=models[0].getPoints();
-		qDebug()<<QString::number(models.length());
-		qDebug()<<QString::number(points.length());
+		curPlot.setPoints(plots[0].getPoints());
 		updateModelList();
 		ui->model_list->setCurrentIndex(0);
 		updatePlot();
@@ -149,16 +150,34 @@ void MainWindow::on_button_load_from_file_clicked()
 void MainWindow::on_model_list_activated(const QString &str)
 {
 	//We are gonna find a model with a name that was selected in the combo box
-	for(auto i=models.begin();i<models.end();i++)
+	for(auto i=plots.begin();i<plots.end();i++)
 	{
 		if((*i).getName()==str)
 		{
 			//And copy it's points to current points
-			points=(*i).getPoints();
+			curPlot.setPoints((*i).getPoints());
 		}
 	}
 	updatePlot();
 	updatePointList();
+}
+
+void MainWindow::on_plot_mode_toggled(bool checked)
+{
+	if(checked)
+	{
+		mode=PLOT_MODE;
+		setupMode();
+	}
+}
+
+void MainWindow::on_model_mode_toggled(bool checked)
+{
+	if(checked)
+	{
+		mode=MODEL_MODE;
+		setupMode();
+	}
 }
 
 void MainWindow::onCoordinateChanged()
@@ -173,7 +192,7 @@ void MainWindow::removePointListItem()
 	//Get sender row
 	int row=sender()->property("row").toInt();
 	// remove this point
-	points.erase(points.begin() + row);
+	curPlot.erasePoint(row);
 	updatePlot();
 	//Remove this row
 	ui->point_list->removeRow(row);
@@ -226,8 +245,71 @@ void MainWindow::clearAll()
 	ui->plot->setDisabled(true);
 	//Clear the list
 	ui->point_list->setRowCount(0);
-	//Clear points vector
-	points.clear();
+	//Clear points vector and current
+	plots.clear();
+	curPlot.clearPoints();
+	//Clear models vector and current
+	models.clear();
+	curModel.clearTerms();
+	//Clear model list
+	ui->model_list->clear();
+}
+
+void MainWindow::setupMode()
+{
+	ui->plot->setInteractions(QCP::iRangeZoom);
+	clearAll();
+	ui->point_list->verticalHeader()->setVisible(false);
+
+	if(mode==PLOT_MODE)
+	{
+		ui->plot_mode->setChecked(true);
+		ui->model_mode->setChecked(false);
+		ui->model_text->setText("Choose plot");
+
+		//Plot stuff
+		ui->plot->xAxis->setRange(-10, 10);
+		ui->plot->yAxis->setRange(-10, 10);
+
+
+		//PointList stuff
+		//Adjust column sizes(shitcoded)
+		//!TODO: replace with accurate methods
+		ui->point_list->setColumnCount(3);
+		ui->point_list->horizontalHeader()->setStretchLastSection(true);
+//		ui->point_list->setColumnWidth(0,ui->point_list->width()*0.4);
+//		ui->point_list->setColumnWidth(1,ui->point_list->width()*0.4);
+		//Edit and remove headers
+		ui->point_list->setHorizontalHeaderItem(0,new QTableWidgetItem("x"));
+		ui->point_list->setHorizontalHeaderItem(1,new QTableWidgetItem("y"));
+		ui->point_list->setHorizontalHeaderItem(2,new QTableWidgetItem(""));
+		//~PointList stuff
+	}
+	else if(mode==MODEL_MODE)
+	{
+		ui->plot_mode->setChecked(false);
+		ui->model_mode->setChecked(true);
+		ui->model_text->setText("Choose model");
+
+		//Plot stuff
+		ui->plot->xAxis->setRange(curModel.getRangeStart(), curModel.getRangeEnd());
+		ui->plot->yAxis->setRange(0, 5);
+
+		//PointList stuff
+		//Adjust column sizes(shitcoded)
+		//!TODO: replace with accurate methods
+		ui->point_list->setColumnCount(5);
+		ui->point_list->horizontalHeader()->setStretchLastSection(true);
+//		ui->point_list->setColumnWidth(0,ui->point_list->width()*0.4);
+//		ui->point_list->setColumnWidth(1,ui->point_list->width()*0.4);
+		//Edit and remove headers
+		ui->point_list->setHorizontalHeaderItem(0,new QTableWidgetItem("name"));
+		ui->point_list->setHorizontalHeaderItem(1,new QTableWidgetItem("start"));
+		ui->point_list->setHorizontalHeaderItem(2,new QTableWidgetItem("end"));
+		ui->point_list->setHorizontalHeaderItem(3,new QTableWidgetItem("plot"));
+		ui->point_list->setHorizontalHeaderItem(3,new QTableWidgetItem(""));
+		//~PointList stuff
+	}
 }
 
 //class methods
@@ -236,9 +318,19 @@ QStringList MainWindow::getModelNames()
 {
 	//Returns all names from models list(sorted)
 	QStringList list;
-	for(auto i=models.begin();i<models.end();i++)
+	if(mode==PLOT_MODE)
 	{
-		list.append((*i).getName());
+		for(auto i=plots.begin();i<plots.end();i++)
+		{
+			list.append((*i).getName());
+		}
+	}
+	else if(mode==MODEL_MODE)
+	{
+		for(auto i=models.begin();i<models.end();i++)
+		{
+			list.append((*i).getName());
+		}
 	}
 	list.sort();
 	return list;
@@ -271,31 +363,31 @@ void MainWindow::updatePointList()
 		lastRowCount=ui->point_list->rowCount();
 	}
 	//Remove redundant rows from list
-	for(int i=0;i<lastRowCount-1-points.size();i++)
+	for(int i=0;i<lastRowCount-1-curPlot.getPoints().size();i++)
 	{
 		ui->point_list->removeRow(lastRowCount-i-2);
 	}
 	//Or add some
-	for(int i=0;i<points.size()-lastRowCount+1;i++)
+	for(int i=0;i<curPlot.getPoints().size()-lastRowCount+1;i++)
 	{
 		addPointListItem();
 	}
 	//Replace all coordinates with new
-	for(int i=0;i<points.size();i++)
+	for(int i=0;i<curPlot.getPoints().size();i++)
 	{
-		((QLineEdit*)ui->point_list->cellWidget(i,0))->setText(QString::number(points[i].x()));
-		((QLineEdit*)ui->point_list->cellWidget(i,1))->setText(QString::number(points[i].y()));
+		((QLineEdit*)ui->point_list->cellWidget(i,0))->setText(QString::number(curPlot.getPoints()[i].x()));
+		((QLineEdit*)ui->point_list->cellWidget(i,1))->setText(QString::number(curPlot.getPoints()[i].y()));
 	}
 }
 
 void MainWindow::updatePointsFromList()
 {
 	//Clear the list so we can push_back to it
-	points.clear();
+	curPlot.clearPoints();
 	//Pushing coordinates from list to our points vector
 	for(int i=0;i<ui->point_list->rowCount()-1;i++)
 	{
-		points.push_back(QPointF(((QLineEdit*)ui->point_list->cellWidget(i,0))->text().toDouble(),((QLineEdit*)ui->point_list->cellWidget(i,1))->text().toDouble()));
+		curPlot.addPointBack(QPointF(((QLineEdit*)ui->point_list->cellWidget(i,0))->text().toDouble(),((QLineEdit*)ui->point_list->cellWidget(i,1))->text().toDouble()));
 	}
 }
 
@@ -310,12 +402,12 @@ void MainWindow::updatePlot()
 	QCPItemEllipse *dot = new QCPItemEllipse(ui->plot);
 	ui->plot->addItem(dot);
 	//! TODO: check for null length of points vector here
-	dot->topLeft->setCoords(points[0].x()-dotSize, points[0].y()+dotSize);
-	dot->bottomRight->setCoords(points[0].x()+dotSize, points[0].y()-dotSize);
+	dot->topLeft->setCoords(curPlot.getPoints()[0].x()-dotSize, curPlot.getPoints()[0].y()+dotSize);
+	dot->bottomRight->setCoords(curPlot.getPoints()[0].x()+dotSize, curPlot.getPoints()[0].y()-dotSize);
 	//Plot lines and other points
-	if(points.size() >= 2)
+	if(curPlot.getPoints().size() >= 2)
 	{
-		for (auto i = points.begin() + 1 ; i != points.end(); ++i)
+		for (auto i = curPlot.getPoints().begin() + 1 ; i != curPlot.getPoints().end(); ++i)
 		{
 			//Point stuff
 			dot = new QCPItemEllipse(ui->plot);
@@ -333,52 +425,5 @@ void MainWindow::updatePlot()
 	ui->plot->replot();
 }
 
-void MainWindow::setupMode(int mode)
-{
-	if(mode==PLOT_MODE)
-	{
-		ui->plot_mode->setChecked(true);
-		ui->model_mode->setChecked(false);
 
-		//Plot stuff
-		ui->plot->setInteractions(QCP::iRangeZoom | QCP::iSelectPlottables);
-		ui->plot->xAxis->setRange(-10, 10);
-		ui->plot->yAxis->setRange(-10, 10);
 
-		clearAll();
-
-		//PointList stuff
-		//Adjust column sizes(shitcoded)
-		//!TODO: replace with accurate methods
-		ui->point_list->setColumnCount(3);
-		ui->point_list->setColumnWidth(0,ui->point_list->width()*0.4);
-		ui->point_list->setColumnWidth(1,ui->point_list->width()*0.4);
-		ui->point_list->horizontalHeader()->setStretchLastSection(true);
-		//Edit and remove headers
-		ui->point_list->setHorizontalHeaderItem(0,new QTableWidgetItem("x"));
-		ui->point_list->setHorizontalHeaderItem(1,new QTableWidgetItem("y"));
-		ui->point_list->setHorizontalHeaderItem(2,new QTableWidgetItem(""));
-		ui->point_list->verticalHeader()->setVisible(false);
-		//~PointList stuff
-	}
-	else if(mode==MODEL_MODE)
-	{
-
-	}
-}
-
-void MainWindow::on_plot_mode_toggled(bool checked)
-{
-	if(checked)
-	{
-		emit setupMode(PLOT_MODE);
-	}
-}
-
-void MainWindow::on_model_mode_toggled(bool checked)
-{
-	if(checked)
-	{
-		emit setupMode(MODEL_MODE);
-	}
-}

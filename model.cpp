@@ -74,3 +74,8 @@ double Model::getRangeEnd()
 {
 	return rangeEnd;
 }
+
+void Model::clearTerms()
+{
+	terms.clear();
+}

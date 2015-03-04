@@ -41,3 +41,18 @@ void Plot::setName(QString name)
 	this->name=name;
 }
 
+void Plot::addPointBack(QPointF point)
+{
+	points.push_back(point);
+}
+
+void Plot::clearPoints()
+{
+	points.clear();
+}
+
+void Plot::erasePoint(int n)
+{
+	points.erase(points.begin() + n);
+}
+

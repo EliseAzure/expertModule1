@@ -31,26 +31,29 @@ class MainWindow : public QMainWindow
 		void on_model_mode_toggled(bool checked);
 		void on_model_list_activated(const QString &str);
 
-		void onCoordinateChanged();//+ on term plot changed
+		void onCoordinateChanged();
 		void onPlotClicked();
 
 		void addPointListItem(double, double);
 		void addPointListItem();
 		void removePointListItem();
 		void clearAll();
-		void setupMode(int mode);
+
 
 
 	private:
 		Ui::MainWindow *ui;
-		QVector<QPointF> points;
+		Plot curPlot;
 		QVector<Plot> plots;
+		Model curModel;
 		QVector<Model> models;
+		int mode;
 		QStringList getModelNames();
-		void updatePlot();//+updateModelPlot
+		void updatePlot();
 		void updateModelList();
 		void updatePointList();
 		void updatePointsFromList();
+		void setupMode();
 };
 
 #endif // MAINWINDOW_H
